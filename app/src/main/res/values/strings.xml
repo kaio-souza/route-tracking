@@ -1,0 +1,80 @@
+<resources>
+    <string name="app_name">distrava</string>
+
+    <!-- Mapa / início -->
+    <string name="start_ride">Iniciar percurso</string>
+    <string name="finish_ride">Finalizar</string>
+    <string name="history">Histórico</string>
+    <string name="offline_maps">Mapas</string>
+    <string name="recenter">Centralizar</string>
+    <string name="no_map_title">Nenhum mapa instalado</string>
+    <string name="no_map_text">Importe o mapa da sua região para usar offline.</string>
+    <string name="no_map_action">Abrir mapas offline</string>
+    <string name="need_permission">O distrava precisa da sua localização para gravar o percurso.</string>
+    <string name="grant_permission">Permitir localização</string>
+    <string name="open_settings">Abrir configurações</string>
+    <string name="permission_denied_forever">A permissão foi negada. Libere a localização nas configurações do app.</string>
+    <string name="approximate_only">Você liberou só a localização aproximada. Para gravar a rota, libere a localização precisa.</string>
+    <string name="gps_off">A localização do aparelho está desligada.</string>
+    <string name="turn_on_gps">Ligar localização</string>
+    <string name="waiting_gps">Procurando sinal de GPS…</string>
+
+    <!-- Gravação -->
+    <string name="label_time">Tempo</string>
+    <string name="label_distance">Distância</string>
+    <string name="label_speed">Velocidade</string>
+    <string name="finish_confirm_title">Finalizar percurso?</string>
+    <string name="finish_confirm_text">A gravação será encerrada e o percurso salvo.</string>
+    <string name="keep_recording">Continuar gravando</string>
+    <string name="finishing">Salvando percurso…</string>
+    <string name="ride_discarded">Percurso muito curto (menos de 50 m). Não foi salvo.</string>
+    <string name="ride_discarded_no_gps">O GPS não pegou sinal durante o percurso, então nada foi gravado. Tente em local aberto, longe de paredes e teto.</string>
+    <string name="waiting_gps_home">Procurando sinal de GPS… Em local aberto o sinal chega mais rápido.</string>
+    <string name="simulate_ride">Simular percurso (teste)</string>
+    <string name="gnss_status">Satélites: %1$d com sinal, %2$d em uso</string>
+    <string name="gnss_none">GPS ainda não respondeu. Se demorar, fique parado em local aberto por alguns minutos.</string>
+    <string name="recording_channel_name">Gravação de percurso</string>
+    <string name="recording_notification_title">Gravando percurso</string>
+    <string name="recording_notification_text">Toque para abrir o distrava</string>
+
+    <!-- Recuperação -->
+    <string name="recover_title">Percurso em andamento</string>
+    <string name="recover_text">Um percurso foi interrompido. Deseja continuar a gravação ou finalizar agora?</string>
+    <string name="recover_continue">Continuar</string>
+    <string name="recover_finish">Finalizar</string>
+
+    <!-- Bateria -->
+    <string name="battery_title">Evite que a gravação pare</string>
+    <string name="battery_text">Alguns aparelhos encerram apps em segundo plano para economizar bateria. Para não perder a gravação com a tela desligada, desative a otimização de bateria para o distrava.</string>
+    <string name="battery_action">Abrir configurações</string>
+    <string name="not_now">Agora não</string>
+
+    <!-- Resumo / detalhe -->
+    <string name="summary_title">Percurso</string>
+    <string name="label_total_time">Tempo total</string>
+    <string name="label_moving_time">Tempo em movimento</string>
+    <string name="label_avg_speed">Vel. média</string>
+    <string name="label_max_speed">Vel. máxima</string>
+    <string name="share">Compartilhar</string>
+    <string name="save_to_gallery">Salvar na galeria</string>
+    <string name="saved_to_gallery">Imagem salva em Imagens/distrava</string>
+    <string name="save_failed">Não foi possível salvar a imagem</string>
+    <string name="delete">Excluir</string>
+    <string name="delete_confirm_title">Excluir percurso?</string>
+    <string name="delete_confirm_text">Essa ação não pode ser desfeita.</string>
+    <string name="cancel">Cancelar</string>
+    <string name="done">Concluir</string>
+    <string name="back">Voltar</string>
+
+    <!-- Histórico -->
+    <string name="history_empty">Nenhum percurso ainda. Toque em Iniciar percurso no mapa para gravar o primeiro.</string>
+
+    <!-- Mapas offline -->
+    <string name="offline_maps_title">Mapas offline</string>
+    <string name="import_map">Importar mapa (.pmtiles)</string>
+    <string name="importing_map">Importando mapa…</string>
+    <string name="offline_maps_empty">Nenhum mapa instalado.</string>
+    <string name="offline_maps_help">Gere o arquivo .pmtiles da sua região no computador (veja docs/offline-maps.md), copie para o celular e importe aqui.</string>
+    <string name="remove_map_title">Remover mapa?</string>
+    <string name="remove">Remover</string>
+</resources>
