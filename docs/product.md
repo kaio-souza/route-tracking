@@ -27,12 +27,20 @@ Cyclists who want to record and share their rides in a simple way, including on 
 - Ride history.
 - Import/download an offline map of a region.
 
+### Version 0.2
+
+- Dark mode for the whole app, map included (RF09).
+- Elevation: climb, descent and profile chart (RF10).
+- Points of interest marked on the map (RF11).
+- Previous rides drawn on the map (RF12).
+- Max speed resistant to GPS spikes (RF04).
+
 ### Out of the MVP
 
 - Manual pause and resume (D10 in [decisions.md](decisions.md)).
 - GPX export.
 - Other sports (running, walking).
-- Speed and altitude charts.
+- Speed charts.
 - Accounts, cloud, social network, rankings, segments, Strava integration.
 - iOS and web.
 
@@ -135,6 +143,36 @@ Acceptance criteria:
 - If the system terminates the app during recording, when reopened the app offers to "Continue" or "Finish" the ride in progress.
 - No recorded point is lost.
 
+### RF09: Dark mode
+
+Acceptance criteria:
+- A button on the home screen switches between light and dark. Until the user chooses, the app follows the system theme.
+- In dark mode, the map, the cards, the buttons and the system bars are dark. All text stays readable.
+- The choice survives closing the app.
+- The summary image stays light, because it is meant for posting.
+
+### RF10: Elevation
+
+Acceptance criteria:
+- The ride detail shows climb, descent and an elevation chart by distance.
+- GPS altitude noise on flat ground does not produce climb.
+- Rides without altitude hide the block instead of showing zeros.
+
+### RF11: Points of interest
+
+Acceptance criteria:
+- A long-press on the map opens a dialog to pick a kind (water, bike shop, restroom, food, other) and an optional name.
+- Points appear on the map with the kind color and the name, also during recording.
+- Tapping a point shows it and allows deleting it.
+- Points are stored on the device only.
+
+### RF12: Previous rides on the map
+
+Acceptance criteria:
+- A button on the home screen shows or hides past routes.
+- Past routes are drawn under the current route and never hide it.
+- The choice survives closing the app.
+
 ## 4. Non-functional requirements
 
 | ID | Requirement |
@@ -169,9 +207,9 @@ Acceptance criteria:
 
 | Screen | Main content |
 |---|---|
-| Map | offline map, position dot, Start button, shortcuts to History and Maps |
+| Map | offline map, position dot, points of interest, Start button, shortcuts to History and Maps, buttons for previous rides, theme and recenter |
 | Recording | map with the route, timer, distance, current speed, Finish button |
 | Summary | statistics, image preview, Share and Save buttons |
 | History | list of rides |
-| Detail | map with the route, statistics, image, delete |
+| Detail | map with the route, statistics, elevation chart, image, delete |
 | Offline maps | installed regions, add, remove |

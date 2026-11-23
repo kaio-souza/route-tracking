@@ -23,6 +23,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Instala ao lado do app real, com dados próprios (prints e testes sem misturar percursos).
+            applicationIdSuffix = ".debug"
+        }
         release {
             // TODO: criar chave de release própria antes de distribuir. Por ora assina com a chave de
             // debug só para medir desempenho da build otimizada no aparelho.

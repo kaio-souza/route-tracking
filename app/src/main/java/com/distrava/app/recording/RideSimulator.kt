@@ -37,11 +37,14 @@ object RideSimulator {
         val rnd = Random(seed)
         val out = mutableListOf<TrackPoint>()
         var t = startTime
+        var progress = 0.0 // 0..1 ao longo do percurso, para a altitude
         fun emit(lat: Double, lon: Double, speed: Float) {
             // ruído de ~3 m
             val jLat = (rnd.nextDouble() - 0.5) * 0.00005
             val jLon = (rnd.nextDouble() - 0.5) * 0.00005
-            out += TrackPoint(t, lat + jLat, lon + jLon, 5.0, speed, 4f + rnd.nextFloat() * 4f)
+            // Altitude fictícia com duas subidas suaves e ruído de ~1 m, para testar a altimetria.
+            val alt = 8.0 + 12.0 * sin(progress * Math.PI * 2).let { it * it } + (rnd.nextDouble() - 0.5) * 2.0
+            out += TrackPoint(t, lat + jLat, lon + jLon, alt, speed, 4f + rnd.nextFloat() * 4f)
             t += 1000
         }
         for (i in 0 until waypoints.size - 1) {
@@ -51,6 +54,7 @@ object RideSimulator {
             val steps = (dist / SPEED_MPS).toInt().coerceAtLeast(1)
             for (s in 0 until steps) {
                 val f = s.toDouble() / steps
+                progress = (i + f) / (waypoints.size - 1)
                 // leve variação de velocidade ao longo do trecho
                 val wobble = 1.0 + 0.15 * sin(f * 6.0) * cos(i.toDouble())
                 emit(lat0 + (lat1 - lat0) * f, lon0 + (lon1 - lon0) * f, (SPEED_MPS * wobble).toFloat())

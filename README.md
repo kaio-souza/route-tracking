@@ -33,7 +33,11 @@ Most ride trackers depend on a phone signal and a cloud account. distrava is bui
 - 🗺️ **Offline vector maps** (MapLibre + PMTiles) on the home screen, centered on your position.
 - ▶️ **Start / finish a ride** with a foreground service, so recording continues with the screen off.
 - 📈 **Live route** drawn in orange on the map, with elapsed time, distance and current speed.
-- 📊 **Ride statistics**: total time, moving time, distance, average speed (moving time based) and max speed.
+- 📊 **Ride statistics**: total time, moving time, distance, average speed (moving time based) and max speed (GPS spikes filtered out).
+- ⛰️ **Elevation**: total climb and descent, plus an elevation profile chart in the ride details.
+- 📍 **Points of interest**: long-press the map to mark water, a bike shop, a restroom, food or anything else. Tap a point to see or delete it.
+- 🟣 **Previous rides on the map**: a toggle draws your past routes as thin purple lines under the current route.
+- 🌙 **Dark mode**: one tap switches the whole app, map included, to a dark theme for night rides. It follows the system theme until you choose.
 - 🖼️ **Summary image** (1080 × 1920, Stories format) with the route drawn over the offline map. Save it to the gallery or share it through the Android share sheet.
 - 🕘 **History** of rides, with a route thumbnail, details view and deletion.
 - 🧭 **Crash-safe recovery**: if the system kills the app mid-ride, you can resume or finish it when you reopen the app.
@@ -46,14 +50,28 @@ Most ride trackers depend on a phone signal and a cloud account. distrava is bui
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/recording.png" width="220" alt="Recording a ride"/><br/><sub>Live recording</sub></td>
-    <td align="center"><img src="docs/screenshots/summary.png" width="220" alt="Ride summary with statistics and share image"/><br/><sub>Ride summary and share image</sub></td>
-    <td align="center"><img src="docs/screenshots/history.png" width="220" alt="Ride history"/><br/><sub>History</sub></td>
+    <td align="center"><img src="docs/screenshots/recording.png" width="220" alt="Recording a ride with a previous ride in purple"/><br/><sub>Live recording, previous ride in purple</sub></td>
+    <td align="center"><img src="docs/screenshots/summary.png" width="220" alt="Ride summary with statistics"/><br/><sub>Ride summary</sub></td>
+    <td align="center"><img src="docs/screenshots/elevation.png" width="220" alt="Elevation profile and share image"/><br/><sub>Elevation and share image</sub></td>
   </tr>
   <tr>
-    <td align="center" colspan="3"><img src="docs/screenshots/offline-maps.png" width="220" alt="Offline maps manager"/><br/><sub>Offline maps manager</sub></td>
+    <td align="center"><img src="docs/screenshots/recording-dark.png" width="220" alt="Recording a ride in dark mode"/><br/><sub>Dark mode</sub></td>
+    <td align="center"><img src="docs/screenshots/pois-dark.png" width="220" alt="Point of interest on the map"/><br/><sub>Point of interest</sub></td>
+    <td align="center"><img src="docs/screenshots/poi-dialog-dark.png" width="220" alt="New point of interest dialog"/><br/><sub>Marking a point</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/summary-dark.png" width="220" alt="Ride summary in dark mode"/><br/><sub>Summary, dark</sub></td>
+    <td align="center"><img src="docs/screenshots/history.png" width="220" alt="Ride history"/><br/><sub>History</sub></td>
+    <td align="center"><img src="docs/screenshots/history-dark.png" width="220" alt="Ride history in dark mode"/><br/><sub>History, dark</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/offline-maps.png" width="220" alt="Offline maps manager"/><br/><sub>Offline maps</sub></td>
+    <td align="center"><img src="docs/screenshots/offline-maps-dark.png" width="220" alt="Offline maps manager in dark mode"/><br/><sub>Offline maps, dark</sub></td>
+    <td></td>
   </tr>
 </table>
+
+<sub>Screenshots taken with the debug ride simulator on Av. Boa Viagem (Recife), with location permission denied, so they show no real position.</sub>
 
 </div>
 
@@ -73,7 +91,8 @@ Most ride trackers depend on a phone signal and a cloud account. distrava is bui
 | Moving time | sum of intervals where speed is above 1 km/h |
 | Distance | sum of distances between consecutive valid points (Haversine) |
 | Average speed | distance / moving time, so stops don't drag the average down |
-| Max speed | highest recorded speed, after noise filtering |
+| Max speed | 95th percentile of 5-second moving averages, skipping windows with GPS accuracy worse than 15 m |
+| Climb / descent | sum of rises and drops of the smoothed GPS altitude, counted only after a 3 m change |
 
 ## Tech stack
 
@@ -101,7 +120,7 @@ UI (Composables) --events--> Service / Repository --> Room
 
 - **Recording state** lives in a `StateFlow` (`Idle`, `Recording`, `Finishing`, `Finished`, `Discarded`). The service writes it and the UI observes it, so the result is not lost when the UI is recreated.
 - **Dependencies** are provided by a manual `AppContainer` created in `DistravaApp`. There is no DI framework, to keep the setup small.
-- **Pure logic** (`Geo`, `LocationFilter`, `StatsCalculator`, `RouteProjection`, `Format`) is plain Kotlin and covered by unit tests.
+- **Pure logic** (`Geo`, `LocationFilter`, `StatsCalculator`, `ElevationCalculator`, `RouteProjection`, `Format`) is plain Kotlin and covered by unit tests.
 
 ### Project structure
 
@@ -110,21 +129,22 @@ app/src/main/java/com/distrava/app/
 ├── DistravaApp.kt            # Application class and AppContainer
 ├── MainActivity.kt           # NavHost and debug simulator trigger
 ├── ui/
-│   ├── map/                  # home screen, live recording, MapLibre in Compose, location
-│   ├── history/              # ride list and detail screens
+│   ├── map/                  # home screen, live recording, MapLibre in Compose, points of interest
+│   ├── history/              # ride list, detail screen and elevation chart
 │   ├── offlinemaps/          # import and remove map regions
 │   └── theme/                # colors and theme
 ├── recording/
 │   ├── RecordingService.kt   # foreground location service
 │   ├── LocationFilter.kt     # drops bad GPS points
 │   ├── StatsCalculator.kt    # time, distance and speeds
+│   ├── Elevation.kt          # climb, descent and elevation profile
 │   └── RideSimulator.kt      # fake route for testing (debug)
 ├── data/
-│   ├── db/                   # Room entities, DAO and database
+│   ├── db/                   # Room entities, DAOs and database (rides, points, points of interest)
 │   └── ActivityRepository.kt # save, finish, image generation, delete
 ├── maps/
 │   ├── OfflineMapStore.kt    # .pmtiles files in filesDir/maps
-│   └── MapStyle.kt           # builds the MapLibre style JSON
+│   └── MapStyle.kt           # builds the MapLibre style JSON (light and dark)
 └── share/
     ├── SummaryImageRenderer.kt  # 1080 × 1920 PNG
     └── ImageExporter.kt         # MediaStore gallery and FileProvider sharing
@@ -196,16 +216,16 @@ If the file is missing, the build still works, but the APK ships without a map a
 Launch and follow the log from the terminal:
 
 ```sh
-adb shell am start -n com.distrava.app/.MainActivity
-adb logcat --pid=$(adb shell pidof com.distrava.app)
+adb shell am start -n com.distrava.app.debug/com.distrava.app.MainActivity
+adb logcat --pid=$(adb shell pidof com.distrava.app.debug)
 ```
 
 ### Testing without leaving home
 
-Debug builds include a ride simulator: a fake route along Av. Boa Viagem (Recife), out and back, running 10× faster than real time. Tap the test button below the Start button (labeled in Portuguese in the app), or launch the app with:
+Debug builds use the package `com.distrava.app.debug`, so they install next to the release app with separate data. They include a ride simulator: a fake route along Av. Boa Viagem (Recife), out and back, running 10× faster than real time. Tap the test button below the Start button (labeled in Portuguese in the app), or launch the app with:
 
 ```sh
-adb shell am start -n com.distrava.app/.MainActivity --ez simulate_ride true
+adb shell am start -n com.distrava.app.debug/com.distrava.app.MainActivity --ez simulate_ride true
 ```
 
 Real GPS needs a clear view of the sky. Indoors the signal is usually too weak, so test near a window or outside.

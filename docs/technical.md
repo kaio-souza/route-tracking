@@ -98,6 +98,15 @@ A point is discarded if:
 - Max speed: 95th percentile of the 5-segment moving averages, ignoring windows with a point less accurate than 15 m (falls back to all windows if none qualify), to cut GPS spikes.
 - A ride with fewer than 2 points or less than 50 m is discarded (RF03).
 
+### Elevation (`ElevationCalculator`)
+
+Calculated when the detail screen opens, from the stored GPS altitude. Nothing extra is saved in the database, so older rides also get it.
+
+- Points without altitude are skipped, but still count toward the distance axis.
+- The altitude series is smoothed with a centered 5-point moving average.
+- Climb and descent are counted from extreme to extreme: a turn (top or valley) is only confirmed after the altitude moves back by 3 m. GPS noise of a few meters on flat ground gives 0 m.
+- The chart uses at most 300 samples. The block is hidden when the ride has fewer than 2 points with altitude.
+
 ### Persistence during recording
 
 - The ride is created in the database when it starts, with status `GRAVANDO` ("recording").
@@ -110,9 +119,11 @@ A point is discarded if:
 To test without leaving home:
 
 - The test button below Start on the home screen (labeled in Portuguese in the app), or
-- `adb shell am start -n com.distrava.app/.MainActivity --ez simulate_ride true`
+- `adb shell am start -n com.distrava.app.debug/com.distrava.app.MainActivity --ez simulate_ride true`
 
-The service starts with a fake out-and-back route on Av. Boa Viagem (geometry taken from the OSM tiles, ~23 km/h, 30 s stop at the turnaround), 10 times faster than real time. The button does not exist and the extra is ignored in release builds.
+Debug builds use the package `com.distrava.app.debug` (`applicationIdSuffix`), so they install next to the release app with separate data and never mix test rides with real ones.
+
+The service starts with a fake out-and-back route on Av. Boa Viagem (geometry taken from the OSM tiles, ~23 km/h, 30 s stop at the turnaround), 10 times faster than real time. The altitude is fictitious (two gentle hills of about 12 m plus 1 m of noise) so the elevation chart can be tested. The button does not exist and the extra is ignored in release builds.
 
 ### No GPS signal
 
@@ -127,6 +138,9 @@ The service starts with a fake out-and-back route on Av. Boa Viagem (geometry ta
 
 - `activities`: `id`, `startedAt`, `finishedAt`, `status` (`GRAVANDO` or `FINALIZADO`), `distanceMeters`, `totalTimeMs`, `movingTimeMs`, `avgSpeedMps`, `maxSpeedMps`, `imagePath`.
 - `track_points`: `id`, `activityId` (FK with `CASCADE`), `time`, `lat`, `lon`, `altitude`, `speedMps`, `accuracyM`.
+- `pois` (since database version 2): `id`, `lat`, `lon`, `name`, `kind` (`agua`, `oficina`, `banheiro`, `comida` or `outro`), `createdAt`.
+
+Version 1 to 2 is a Room `AutoMigration` (only the `pois` table is added).
 
 Internal units are always SI (meters, milliseconds, m/s). Conversion to km and km/h happens only in `Format`.
 
@@ -148,6 +162,19 @@ The public OpenStreetMap tile servers prohibit bulk downloads for offline use. T
 - "© OpenStreetMap" attribution shown on the map (info button).
 
 The Mata Sul + Recife area (`-35.95,-9.00,-34.80,-7.90`, zoom 0 to 15) is about 36 MB.
+
+### Dark map
+
+`MapStyle.build(…, dark = true)` swaps the colors of `layers.json` property by property, through a fixed palette (`DARK_PALETTE`). Label halos always become the dark background color, even where the light style uses white, because the same white is used for road fill. The screens pick the style from the current theme. The summary image keeps the light map on purpose.
+
+### Overlays on the map (`DistravaMap`)
+
+Drawn on top of the style, from bottom to top:
+
+1. Previous rides (`historyRoutes`): thin purple lines at 55% opacity, so they never cover the current route. Up to 200 finished rides, each reduced to 400 points. Turned on by the history button on the home screen (saved in preferences).
+2. Current route (orange, with a white casing) and start/end markers.
+3. Points of interest: circle colored by kind, with the name below. Long-press on the map creates one; tapping the circle opens it.
+4. Current position.
 
 ## 6. Summary image
 
@@ -208,6 +235,6 @@ Moto G7 Power (Android 10, Snapdragon 632, 3 GB), **release** build (no R8), Mat
 
 ## 10. Tests
 
-- **Unit tests (JVM):** `./gradlew testDebugUnitTest`. They cover statistics, GPS filter, route projection and formatting.
+- **Unit tests (JVM):** `./gradlew testDebugUnitTest`. They cover statistics, GPS filter, elevation, route projection and formatting.
 - **On the device:** simulator (section 3) + acceptance criteria checklist in [product.md](product.md).
 - **Field:** real ride with the screen off for at least 30 min to validate RNF02 and RNF03.

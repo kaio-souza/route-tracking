@@ -465,7 +465,13 @@ private fun PanelCard(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun BigButton(text: String, onClick: () -> Unit, enabled: Boolean = true, color: Color? = null) {
+private fun BigButton(
+    text: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    color: Color? = null,
+    contentColor: Color? = null,
+) {
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -473,7 +479,11 @@ private fun BigButton(text: String, onClick: () -> Unit, enabled: Boolean = true
             .fillMaxWidth()
             .height(64.dp),
         shape = RoundedCornerShape(32.dp),
-        colors = if (color != null) ButtonDefaults.buttonColors(containerColor = color) else ButtonDefaults.buttonColors(),
+        colors = if (color != null) {
+            ButtonDefaults.buttonColors(containerColor = color, contentColor = contentColor ?: MaterialTheme.colorScheme.onPrimary)
+        } else {
+            ButtonDefaults.buttonColors()
+        },
     ) {
         Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     }
@@ -597,7 +607,12 @@ private fun RecordingPanel(state: RecordingState.Recording, gnss: GnssInfo?, onF
             Metric(stringResource(R.string.label_speed), Format.speed(state.currentSpeedMps))
         }
         Spacer(Modifier.height(16.dp))
-        BigButton(stringResource(R.string.finish_ride), onFinish, color = MaterialTheme.colorScheme.onSurface)
+        BigButton(
+            stringResource(R.string.finish_ride),
+            onFinish,
+            color = MaterialTheme.colorScheme.onSurface,
+            contentColor = MaterialTheme.colorScheme.surface,
+        )
     }
 }
 
