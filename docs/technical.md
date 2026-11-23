@@ -87,7 +87,7 @@ Service actions: `START` (new ride), `RESUME` (continue an interrupted ride) and
 A point is discarded if:
 
 1. `accuracy` > 25 m.
-2. The implied speed since the last accepted point is > 100 km/h (GPS jump).
+2. The implied speed since the last accepted point is > 70 km/h (GPS jump).
 3. The timestamp is earlier than or equal to the last accepted point's.
 
 ### Calculations (`StatsCalculator`)
@@ -95,7 +95,7 @@ A point is discarded if:
 - Distance: sum of Haversine distances between consecutive accepted points.
 - Moving time: sum of the intervals where the segment speed was > 1 km/h.
 - Average speed: distance / moving time (D09).
-- Max speed: highest 5-segment moving average, to ignore noise spikes.
+- Max speed: 95th percentile of the 5-segment moving averages, ignoring windows with a point less accurate than 15 m (falls back to all windows if none qualify), to cut GPS spikes.
 - A ride with fewer than 2 points or less than 50 m is discarded (RF03).
 
 ### Persistence during recording

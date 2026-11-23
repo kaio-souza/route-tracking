@@ -65,4 +65,36 @@ class StatsCalculatorTest {
         assertEquals(0.0, stats.avgSpeedMps, 0.0)
         assertFalse(StatsCalculator.isValidRide(emptyList(), stats))
     }
+
+    /** Pontos a cada 1 s andando 5 m/s; `offsets` desloca pontos (m) e `accuracy` define a precisão. */
+    private fun ride(n: Int, offsets: Map<Int, Double> = emptyMap(), accuracy: (Int) -> Float = { 5f }) =
+        List(n) { i ->
+            val meters = i * 5.0 + (offsets[i] ?: 0.0)
+            TrackPoint(time = i * 1000L, lat = -8.0 + meters * degPer100m / 100.0, lon = -35.0, accuracyM = accuracy(i))
+        }
+
+    @Test
+    fun `percentil 95 ignora poucas janelas com salto de GPS`() {
+        // 200 trechos; um ponto salta 20 m à frente e volta (afeta ~6 janelas, 3%).
+        val pts = ride(201, offsets = mapOf(100 to 20.0))
+        val stats = StatsCalculator.compute(pts, 0, pts.last().time)
+        assertEquals(5.0, stats.maxSpeedMps, 0.05)
+    }
+
+    @Test
+    fun `trecho com precisao ruim nao entra na velocidade maxima`() {
+        // 30 pontos seguidos com precisão de 20 m e deriva de +7 m/s (15% das janelas).
+        val drift = (100..130).associateWith { (it - 100) * 7.0 }
+        val pts = ride(201, offsets = drift, accuracy = { if (it in 100..130) 20f else 5f })
+        val stats = StatsCalculator.compute(pts, 0, pts.last().time)
+        assertEquals(5.0, stats.maxSpeedMps, 0.05)
+    }
+
+    @Test
+    fun `percentil nearest rank`() {
+        val values = (1..100).map { it.toDouble() }
+        assertEquals(95.0, StatsCalculator.percentile(values, 0.95), 0.0)
+        assertEquals(7.0, StatsCalculator.percentile(listOf(7.0), 0.95), 0.0)
+        assertEquals(0.0, StatsCalculator.percentile(emptyList(), 0.95), 0.0)
+    }
 }

@@ -5,7 +5,8 @@ package com.distrava.app.recording
  */
 object LocationFilter {
     const val MAX_ACCURACY_M = 25f
-    const val MAX_SPEED_MPS = 100.0 / 3.6
+    /** Acima disso o salto é tratado como erro de GPS (bicicleta, inclusive descida forte). */
+    const val MAX_SPEED_MPS = 70.0 / 3.6
 
     enum class Result { ACCEPTED, LOW_ACCURACY, OUT_OF_ORDER, JUMP }
 

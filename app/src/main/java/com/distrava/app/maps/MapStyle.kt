@@ -18,7 +18,12 @@ class MapStyle(context: Context) {
      * @param route se informada, a rota é embutida no estilo (usado nos snapshots da imagem e do histórico).
      * @param routeWidth largura da linha da rota em pixels lógicos.
      */
-    fun build(regions: List<MapRegion>, route: List<TrackPoint>? = null, routeWidth: Float = 5f): String {
+    fun build(
+        regions: List<MapRegion>,
+        route: List<TrackPoint>? = null,
+        routeWidth: Float = 5f,
+        dark: Boolean = false,
+    ): String {
         val sources = JSONObject()
         regions.forEachIndexed { i, r ->
             sources.put(
@@ -35,7 +40,7 @@ class MapStyle(context: Context) {
             JSONObject()
                 .put("id", "background")
                 .put("type", "background")
-                .put("paint", JSONObject().put("background-color", LAND_COLOR)),
+                .put("paint", JSONObject().put("background-color", if (dark) DARK_LAND else LAND_COLOR)),
         )
         for (t in 0 until layerTemplate.length()) {
             val template = layerTemplate.getJSONObject(t)
@@ -43,6 +48,7 @@ class MapStyle(context: Context) {
                 val layer = JSONObject(template.toString())
                 layer.put("id", "r$i-${template.getString("id")}")
                 layer.put("source", "r$i")
+                if (dark) layer.optJSONObject("paint")?.let(::darken)
                 layers.put(layer)
             }
         }
@@ -56,6 +62,20 @@ class MapStyle(context: Context) {
             .put("sources", sources)
             .put("layers", layers)
             .toString()
+    }
+
+    /** Troca as cores claras do modelo por equivalentes escuras, propriedade por propriedade. */
+    private fun darken(paint: JSONObject) {
+        for (key in paint.keys().asSequence().toList()) {
+            if (!key.endsWith("-color")) continue
+            paint.put(key, if (key == "text-halo-color") DARK_LAND else darkenValue(paint.get(key)))
+        }
+    }
+
+    private fun darkenValue(value: Any): Any = when (value) {
+        is String -> DARK_PALETTE[value.uppercase()] ?: value
+        is JSONArray -> JSONArray().also { out -> for (i in 0 until value.length()) out.put(darkenValue(value.get(i))) }
+        else -> value
     }
 
     private fun addRoute(sources: JSONObject, layers: JSONArray, route: List<TrackPoint>, width: Float) {
@@ -110,5 +130,33 @@ class MapStyle(context: Context) {
         const val LAND_COLOR = "#EFECE5"
         const val ROUTE_COLOR = "#FC6A03"
         const val GRAPHITE = "#2B2B2B"
+        const val DARK_LAND = "#1C1B19"
+
+        private val DARK_PALETTE = mapOf(
+            "#EFECE5" to DARK_LAND, // terra
+            "#D3E2C3" to "#1F2A1D", // floresta
+            "#E1E8CF" to "#232A20", // campo
+            "#DCE5C9" to "#22281F", // mato
+            "#ECE9D8" to "#24241E", // lavoura
+            "#EAE4D6" to "#252320", // solo exposto
+            "#E8E3DA" to "#22211E",
+            "#CFE2BF" to "#1E2B1C", // áreas verdes
+            "#E6E0D5" to "#211F1C", // área urbana
+            "#A8CDE0" to "#15283A", // água
+            "#DDD6CA" to "#2C2A27", // prédios
+            "#B7AE9E" to "#5A554D", // trilhas
+            "#D6CFC2" to "#2A2825", // contorno ruas menores
+            "#FFFFFF" to "#3A3733", // ruas
+            "#CFC6B6" to "#2A2825", // contorno ruas principais
+            "#D9B97A" to "#6B5530", // contorno rodovias
+            "#F6E3B4" to "#8A6D3A", // rodovias
+            "#B5ADA0" to "#4A463F", // ferrovia
+            "#A79F92" to "#5A554D", // limites
+            "#4A7C99" to "#7FA9C4", // nomes de água
+            "#5B564E" to "#A8A196", // nomes de ruas
+            "#8A8378" to "#8F887D", // bairros
+            "#2B2B2B" to "#E6E1D8", // cidades
+            "#7A766E" to "#A39D92", // regiões
+        )
     }
 }

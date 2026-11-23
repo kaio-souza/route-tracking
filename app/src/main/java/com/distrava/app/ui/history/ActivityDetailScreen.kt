@@ -47,6 +47,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -79,7 +80,8 @@ fun ActivityDetailScreen(activityId: Long, onBack: () -> Unit) {
 
     val activity by repo.observe(activityId).collectAsStateWithLifecycle(initialValue = null)
     val regions by container.offlineMaps.regions.collectAsStateWithLifecycle()
-    val styleJson = remember(regions) { container.mapStyle.build(regions) }
+    val darkMap = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val styleJson = remember(regions, darkMap) { container.mapStyle.build(regions, dark = darkMap) }
 
     val points by produceState(initialValue = emptyList<TrackPoint>(), activityId) {
         value = repo.points(activityId)
@@ -240,7 +242,7 @@ fun ActivityDetailScreen(activityId: Long, onBack: () -> Unit) {
 @Composable
 private fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(label.uppercase(), style = MaterialTheme.typography.labelMedium, color = Color(0xFF7A766E))
+        Text(label.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
     }
 }

@@ -7,6 +7,8 @@
     <string name="history">Histórico</string>
     <string name="offline_maps">Mapas</string>
     <string name="recenter">Centralizar</string>
+    <string name="theme_dark">Modo escuro</string>
+    <string name="theme_light">Modo claro</string>
     <string name="no_map_title">Nenhum mapa instalado</string>
     <string name="no_map_text">Importe o mapa da sua região para usar offline.</string>
     <string name="no_map_action">Abrir mapas offline</string>

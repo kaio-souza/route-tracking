@@ -99,13 +99,13 @@ private fun HistoryItem(activity: ActivityEntity, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             RouteThumbnail(activity.id, Modifier.size(84.dp))
             Spacer(Modifier.size(16.dp))
             Column {
-                Text(Format.dateTime(activity.startedAt), style = MaterialTheme.typography.labelLarge, color = Color(0xFF7A766E))
+                Text(Format.dateTime(activity.startedAt), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(Format.distance(activity.distanceMeters), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
                     "${Format.duration(activity.movingTimeMs)} · ${Format.speed(activity.avgSpeedMps)}",

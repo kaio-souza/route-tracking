@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.AlertDialog
@@ -40,6 +42,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +54,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
@@ -86,7 +90,9 @@ fun HomeScreen(
 
     val recState by RecordingStateHolder.state.collectAsStateWithLifecycle()
     val regions by container.offlineMaps.regions.collectAsStateWithLifecycle()
-    val styleJson = remember(regions) { container.mapStyle.build(regions) }
+    val darkOverride by container.darkTheme.collectAsStateWithLifecycle()
+    val darkMap = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val styleJson = remember(regions, darkMap) { container.mapStyle.build(regions, dark = darkMap) }
 
     // Permissões e GPS são reavaliados sempre que a tela volta ao primeiro plano.
     var hasFine by remember { mutableStateOf(LocationAccess.hasFine(context)) }
@@ -231,13 +237,25 @@ fun HomeScreen(
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.End,
         ) {
+            val darkNow = darkOverride ?: isSystemInDarkTheme()
+            SmallFloatingActionButton(
+                onClick = { container.setDarkTheme(!darkNow) },
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+            ) {
+                Icon(
+                    if (darkNow) Icons.Default.LightMode else Icons.Default.DarkMode,
+                    contentDescription = stringResource(if (darkNow) R.string.theme_light else R.string.theme_dark),
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
             if (myLocation != null) {
                 SmallFloatingActionButton(
                     onClick = {
                         follow = true
                         recenter++
                     },
-                    containerColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                 ) {
                     Icon(Icons.Default.LocationOn, contentDescription = stringResource(R.string.recenter))
                 }
@@ -363,7 +381,7 @@ private fun discardMessage(reason: DiscardReason) = when (reason) {
 private fun MapChip(text: String, enabled: Boolean, onClick: () -> Unit, icon: @Composable () -> Unit) {
     ExtendedFloatingActionButton(
         onClick = { if (enabled) onClick() },
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         contentColor = if (enabled) MaterialTheme.colorScheme.onSurface else Color.Gray,
         icon = icon,
         text = { Text(text) },
@@ -376,7 +394,7 @@ private fun PanelCard(content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
     ) {
         Column(Modifier.padding(20.dp)) { content() }
@@ -486,7 +504,7 @@ private fun GnssLine(gnss: GnssInfo?) {
             stringResource(R.string.gnss_status, gnss.withSignal, gnss.usedInFix)
         },
         style = MaterialTheme.typography.bodySmall,
-        color = Color(0xFF7A766E),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
@@ -534,7 +552,7 @@ private fun FinishingPanel() {
 @Composable
 private fun Metric(label: String, value: String) {
     Column {
-        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Color(0xFF7A766E))
+        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     }
 }

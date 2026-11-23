@@ -105,7 +105,7 @@ fun OfflineMapsScreen(onBack: () -> Unit) {
             regions.forEach { region ->
                 Card(
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
                 ) {
                     Row(Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Place, contentDescription = null, tint = DistravaOrange)
@@ -136,7 +136,7 @@ fun OfflineMapsScreen(onBack: () -> Unit) {
                     Text(stringResource(R.string.import_map), fontWeight = FontWeight.Bold)
                 }
             }
-            Text(stringResource(R.string.offline_maps_help), style = MaterialTheme.typography.bodySmall, color = Color(0xFF7A766E))
+            Text(stringResource(R.string.offline_maps_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 

@@ -19,6 +19,12 @@ object StatsCalculator {
     /** Quantidade de trechos na média móvel da velocidade máxima. */
     const val MAX_SPEED_WINDOW = 5
 
+    /** Percentil das janelas usado como velocidade máxima (corta picos de GPS). */
+    const val MAX_SPEED_PERCENTILE = 0.95
+
+    /** Trechos com ponta de precisão pior que isso não entram na velocidade máxima. */
+    const val MAX_SPEED_ACCURACY_M = 15f
+
     /** Percurso com menos que isso é descartado (RF03). */
     const val MIN_DISTANCE_M = 50.0
 
@@ -37,19 +43,7 @@ object StatsCalculator {
             if (dt > 0 && d / (dt / 1000.0) > MOVING_THRESHOLD_MPS) movingMs += dt
         }
 
-        var maxSpeed = 0.0
-        if (segDist.isNotEmpty()) {
-            val window = minOf(MAX_SPEED_WINDOW, segDist.size)
-            for (end in window - 1 until segDist.size) {
-                var d = 0.0
-                var t = 0L
-                for (j in end - window + 1..end) {
-                    d += segDist[j]
-                    t += segMs[j]
-                }
-                if (t > 0) maxSpeed = maxOf(maxSpeed, d / (t / 1000.0))
-            }
-        }
+        val maxSpeed = maxSpeed(points, segDist, segMs)
 
         val avg = if (movingMs > 0) distance / (movingMs / 1000.0) else 0.0
         return RideStats(
@@ -59,6 +53,42 @@ object StatsCalculator {
             avgSpeedMps = avg,
             maxSpeedMps = maxSpeed,
         )
+    }
+
+    /**
+     * Média móvel de [MAX_SPEED_WINDOW] trechos; janelas com ponto impreciso são ignoradas
+     * (se todas forem, usa todas). O resultado é o percentil [MAX_SPEED_PERCENTILE] das janelas.
+     */
+    private fun maxSpeed(points: List<TrackPoint>, segDist: DoubleArray, segMs: LongArray): Double {
+        if (segDist.isEmpty()) return 0.0
+        val window = minOf(MAX_SPEED_WINDOW, segDist.size)
+        val precise = mutableListOf<Double>()
+        val all = mutableListOf<Double>()
+        for (end in window - 1 until segDist.size) {
+            var d = 0.0
+            var t = 0L
+            var accurate = true
+            for (j in end - window + 1..end) {
+                d += segDist[j]
+                t += segMs[j]
+                if (points[j].accuracyM > MAX_SPEED_ACCURACY_M || points[j + 1].accuracyM > MAX_SPEED_ACCURACY_M) {
+                    accurate = false
+                }
+            }
+            if (t <= 0) continue
+            val speed = d / (t / 1000.0)
+            all += speed
+            if (accurate) precise += speed
+        }
+        return percentile(precise.ifEmpty { all }, MAX_SPEED_PERCENTILE)
+    }
+
+    /** Percentil pelo método nearest-rank. */
+    internal fun percentile(values: List<Double>, p: Double): Double {
+        if (values.isEmpty()) return 0.0
+        val sorted = values.sorted()
+        val rank = kotlin.math.ceil(p * sorted.size).toInt().coerceIn(1, sorted.size)
+        return sorted[rank - 1]
     }
 
     fun isValidRide(points: List<TrackPoint>, stats: RideStats): Boolean =
