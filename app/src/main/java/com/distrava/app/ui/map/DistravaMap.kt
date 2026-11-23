@@ -15,6 +15,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.distrava.app.data.db.PoiEntity
 import com.distrava.app.recording.TrackPoint
 import com.distrava.app.share.RouteProjection
 import org.maplibre.android.camera.CameraPosition
@@ -28,6 +29,8 @@ import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
@@ -39,6 +42,10 @@ data class LatLon(val lat: Double, val lon: Double)
 private const val ROUTE_SOURCE = "distrava-route"
 private const val ME_SOURCE = "distrava-me"
 private const val ENDPOINTS_SOURCE = "distrava-endpoints"
+private const val HISTORY_SOURCE = "distrava-history"
+private const val POI_SOURCE = "distrava-pois"
+private const val POI_LAYER = "distrava-pois-circle"
+private const val HISTORY_COLOR = "#7B61FF"
 private const val ORANGE = "#FC6A03"
 private const val GRAPHITE = "#2B2B2B"
 private const val MAX_ROUTE_POINTS = 5000
@@ -68,11 +75,17 @@ fun DistravaMap(
     showEndpoints: Boolean = false,
     interactive: Boolean = true,
     bottomPaddingPx: Int = 0,
+    historyRoutes: List<List<TrackPoint>> = emptyList(),
+    pois: List<PoiEntity> = emptyList(),
+    onLongPress: ((LatLon) -> Unit)? = null,
+    onPoiClick: ((Long) -> Unit)? = null,
     onUserGesture: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val gesture by rememberUpdatedState(onUserGesture)
+    val longPress by rememberUpdatedState(onLongPress)
+    val poiClick by rememberUpdatedState(onPoiClick)
 
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var style by remember { mutableStateOf<Style?>(null) }
@@ -95,6 +108,20 @@ fun DistravaMap(
                     .target(LatLng(-8.3, -35.6)).zoom(7.0).build()
                 m.addOnCameraMoveStartedListener { reason ->
                     if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) gesture()
+                }
+                m.addOnMapLongClickListener { latLng ->
+                    val cb = longPress ?: return@addOnMapLongClickListener false
+                    cb(LatLon(latLng.latitude, latLng.longitude))
+                    true
+                }
+                m.addOnMapClickListener { latLng ->
+                    val cb = poiClick ?: return@addOnMapClickListener false
+                    val screen = m.projection.toScreenLocation(latLng)
+                    val box = android.graphics.RectF(screen.x - 24, screen.y - 24, screen.x + 24, screen.y + 24)
+                    val hit = m.queryRenderedFeatures(box, POI_LAYER).firstOrNull()
+                        ?: return@addOnMapClickListener false
+                    cb(hit.getNumberProperty("id").toLong())
+                    true
                 }
                 map = m
             }
@@ -160,6 +187,27 @@ fun DistravaMap(
             emptyList()
         }
         s.getSourceAs<GeoJsonSource>(ENDPOINTS_SOURCE)?.setGeoJson(FeatureCollection.fromFeatures(endpoints))
+    }
+
+    // Percursos anteriores: linhas finas abaixo da rota atual.
+    LaunchedEffect(style, historyRoutes) {
+        val s = style ?: return@LaunchedEffect
+        val lines = historyRoutes.filter { it.size >= 2 }.map { r ->
+            Feature.fromGeometry(LineString.fromLngLats(r.map { Point.fromLngLat(it.lon, it.lat) }))
+        }
+        s.getSourceAs<GeoJsonSource>(HISTORY_SOURCE)?.setGeoJson(FeatureCollection.fromFeatures(lines))
+    }
+
+    LaunchedEffect(style, pois) {
+        val s = style ?: return@LaunchedEffect
+        val features = pois.map { p ->
+            Feature.fromGeometry(Point.fromLngLat(p.lon, p.lat)).also {
+                it.addNumberProperty("id", p.id)
+                it.addStringProperty("name", p.name)
+                it.addStringProperty("color", p.poiKind.color)
+            }
+        }
+        s.getSourceAs<GeoJsonSource>(POI_SOURCE)?.setGeoJson(FeatureCollection.fromFeatures(features))
     }
 
     LaunchedEffect(style, myLocation) {
@@ -234,10 +282,22 @@ fun DistravaMap(
 }
 
 private fun addOverlay(style: Style) {
+    style.addSource(GeoJsonSource(HISTORY_SOURCE))
+    style.addSource(GeoJsonSource(POI_SOURCE))
     style.addSource(GeoJsonSource(ROUTE_SOURCE))
     style.addSource(GeoJsonSource(ENDPOINTS_SOURCE))
     style.addSource(GeoJsonSource(ME_SOURCE))
 
+    // Ordem: histórico < rota atual < início/fim < pontos de interesse < posição atual.
+    style.addLayer(
+        LineLayer(HISTORY_SOURCE, HISTORY_SOURCE).withProperties(
+            PropertyFactory.lineColor(HISTORY_COLOR),
+            PropertyFactory.lineWidth(3f),
+            PropertyFactory.lineOpacity(0.55f),
+            PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+            PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+        ),
+    )
     style.addLayer(
         LineLayer("$ROUTE_SOURCE-casing", ROUTE_SOURCE).withProperties(
             PropertyFactory.lineColor("#FFFFFF"),
@@ -266,6 +326,27 @@ private fun addOverlay(style: Style) {
             ),
             PropertyFactory.circleStrokeColor(GRAPHITE),
             PropertyFactory.circleStrokeWidth(3f),
+        ),
+    )
+    style.addLayer(
+        CircleLayer(POI_LAYER, POI_SOURCE).withProperties(
+            PropertyFactory.circleRadius(9f),
+            PropertyFactory.circleColor(Expression.get("color")),
+            PropertyFactory.circleStrokeColor("#FFFFFF"),
+            PropertyFactory.circleStrokeWidth(2.5f),
+        ),
+    )
+    style.addLayer(
+        SymbolLayer("$POI_SOURCE-label", POI_SOURCE).withProperties(
+            PropertyFactory.textField(Expression.get("name")),
+            PropertyFactory.textFont(arrayOf("NotoSans-Medium")),
+            PropertyFactory.textSize(12f),
+            PropertyFactory.textAnchor(Property.TEXT_ANCHOR_TOP),
+            PropertyFactory.textOffset(arrayOf(0f, 1f)),
+            PropertyFactory.textColor(GRAPHITE),
+            PropertyFactory.textHaloColor("#FFFFFF"),
+            PropertyFactory.textHaloWidth(1.5f),
+            PropertyFactory.textOptional(true),
         ),
     )
     style.addLayer(

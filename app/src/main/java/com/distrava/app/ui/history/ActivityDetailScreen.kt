@@ -59,6 +59,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.distrava.app.DistravaApp
 import com.distrava.app.R
+import com.distrava.app.recording.ElevationCalculator
+import com.distrava.app.recording.ElevationProfile
 import com.distrava.app.recording.TrackPoint
 import com.distrava.app.share.ImageExporter
 import com.distrava.app.ui.Format
@@ -67,6 +69,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.math.roundToInt
 
 /** Resumo logo após finalizar e detalhe a partir do histórico (RF04, RF05, RF06). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,6 +88,9 @@ fun ActivityDetailScreen(activityId: Long, onBack: () -> Unit) {
 
     val points by produceState(initialValue = emptyList<TrackPoint>(), activityId) {
         value = repo.points(activityId)
+    }
+    val elevation by produceState<ElevationProfile?>(initialValue = null, points) {
+        value = withContext(Dispatchers.Default) { ElevationCalculator.compute(points) }
     }
     var imageFile by remember { mutableStateOf<File?>(null) }
     LaunchedEffect(activity?.id) {
@@ -167,6 +173,16 @@ fun ActivityDetailScreen(activityId: Long, onBack: () -> Unit) {
             }
             Spacer(Modifier.height(16.dp))
             Stat(stringResource(R.string.label_total_time), Format.duration(a.totalTimeMs), Modifier.fillMaxWidth())
+
+            elevation?.let { e ->
+                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth()) {
+                    Stat(stringResource(R.string.label_elevation_gain), "${e.gainM.roundToInt()} m", Modifier.weight(1f))
+                    Stat(stringResource(R.string.label_elevation_loss), "${e.lossM.roundToInt()} m", Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(16.dp))
+                ElevationChart(e, Modifier.fillMaxWidth())
+            }
 
             Spacer(Modifier.height(24.dp))
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {

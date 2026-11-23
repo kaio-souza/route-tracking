@@ -32,6 +32,9 @@ interface ActivityDao {
     @Insert
     suspend fun insertPoints(points: List<TrackPointEntity>)
 
+    @Query("SELECT id FROM activities WHERE status = '${ActivityStatus.FINISHED}' ORDER BY startedAt DESC LIMIT :limit")
+    suspend fun finishedIds(limit: Int): List<Long>
+
     @Query("SELECT * FROM track_points WHERE activityId = :activityId ORDER BY time ASC")
     suspend fun getPoints(activityId: Long): List<TrackPointEntity>
 }

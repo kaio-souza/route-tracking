@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Place
@@ -49,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -70,6 +72,8 @@ import com.distrava.app.BuildConfig
 import com.distrava.app.data.DiscardReason
 import com.distrava.app.data.FinishResult
 import com.distrava.app.data.db.ActivityEntity
+import com.distrava.app.data.db.PoiEntity
+import com.distrava.app.recording.TrackPoint
 import com.distrava.app.recording.RecordingService
 import com.distrava.app.recording.RecordingState
 import com.distrava.app.recording.RecordingStateHolder
@@ -91,6 +95,20 @@ fun HomeScreen(
     val recState by RecordingStateHolder.state.collectAsStateWithLifecycle()
     val regions by container.offlineMaps.regions.collectAsStateWithLifecycle()
     val darkOverride by container.darkTheme.collectAsStateWithLifecycle()
+    val pois by container.poiDao.observeAll().collectAsStateWithLifecycle(initialValue = emptyList())
+    val finished by container.activityRepository.observeFinished().collectAsStateWithLifecycle(initialValue = emptyList())
+    var showHistory by remember { mutableStateOf(container.prefs.getBoolean(PREF_SHOW_HISTORY, false)) }
+    val historyRoutes by produceState(initialValue = emptyList<List<TrackPoint>>(), showHistory, finished.size) {
+        value = if (showHistory) container.activityRepository.historyRoutes() else emptyList()
+    }
+    var pendingPoi by remember { mutableStateOf<LatLon?>(null) }
+    var selectedPoiId by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(Unit) {
+        if (!container.prefs.getBoolean(PREF_POI_HINT, false)) {
+            container.prefs.edit().putBoolean(PREF_POI_HINT, true).apply()
+            snackbar.showSnackbar(context.getString(R.string.poi_hint), withDismissAction = true)
+        }
+    }
     val darkMap = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val styleJson = remember(regions, darkMap) { container.mapStyle.build(regions, dark = darkMap) }
 
@@ -202,6 +220,10 @@ fun HomeScreen(
             follow = isRecording && follow,
             recenterSignal = recenter,
             bottomPaddingPx = bottomPanelPx,
+            historyRoutes = historyRoutes,
+            pois = pois,
+            onLongPress = { pendingPoi = it },
+            onPoiClick = { selectedPoiId = it },
             onUserGesture = {
                 follow = false
                 lastGesture = System.currentTimeMillis()
@@ -237,6 +259,21 @@ fun HomeScreen(
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.End,
         ) {
+            SmallFloatingActionButton(
+                onClick = {
+                    showHistory = !showHistory
+                    container.prefs.edit().putBoolean(PREF_SHOW_HISTORY, showHistory).apply()
+                },
+                containerColor = if (showHistory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,
+                contentColor = if (showHistory) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            ) {
+                Icon(
+                    Icons.Default.History,
+                    contentDescription = stringResource(if (showHistory) R.string.history_routes_hide else R.string.history_routes_show),
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
             val darkNow = darkOverride ?: isSystemInDarkTheme()
             SmallFloatingActionButton(
                 onClick = { container.setDarkTheme(!darkNow) },
@@ -297,6 +334,30 @@ fun HomeScreen(
         }
 
         SnackbarHost(snackbar, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 72.dp))
+    }
+
+    pendingPoi?.let { at ->
+        AddPoiDialog(
+            onDismiss = { pendingPoi = null },
+            onSave = { name, kind ->
+                pendingPoi = null
+                scope.launch {
+                    container.poiDao.insert(
+                        PoiEntity(lat = at.lat, lon = at.lon, name = name, kind = kind.key, createdAt = System.currentTimeMillis()),
+                    )
+                }
+            },
+        )
+    }
+    pois.firstOrNull { it.id == selectedPoiId }?.let { poi ->
+        PoiDetailDialog(
+            poi = poi,
+            onDismiss = { selectedPoiId = null },
+            onDelete = {
+                selectedPoiId = null
+                scope.launch { container.poiDao.delete(poi.id) }
+            },
+        )
     }
 
     if (confirmFinish) {
@@ -371,6 +432,8 @@ fun HomeScreen(
 
 private const val PREF_BATTERY_PROMPTED = "battery_prompted"
 private const val FOLLOW_RESUME_MS = 8_000L
+private const val PREF_SHOW_HISTORY = "show_history_routes"
+private const val PREF_POI_HINT = "poi_hint_shown"
 
 private fun discardMessage(reason: DiscardReason) = when (reason) {
     DiscardReason.NO_GPS -> R.string.ride_discarded_no_gps

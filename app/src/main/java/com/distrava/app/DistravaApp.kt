@@ -31,6 +31,7 @@ class AppContainer(context: Context) {
         snapshots = mapSnapshots,
         imagesDir = File(context.filesDir, "images"),
     )
+    val poiDao = database.poiDao()
     val prefs = context.getSharedPreferences("distrava", Context.MODE_PRIVATE)
 
     /** null = seguir o sistema; true/false = escolha do usuário. */

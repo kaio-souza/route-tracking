@@ -79,4 +79,20 @@
     <string name="offline_maps_help">Gere o arquivo .pmtiles da sua região no computador (veja docs/offline-maps.md), copie para o celular e importe aqui.</string>
     <string name="remove_map_title">Remover mapa?</string>
     <string name="remove">Remover</string>
+    <string name="label_elevation_gain">Subida</string>
+    <string name="label_elevation_loss">Descida</string>
+    <string name="label_elevation_profile">Altimetria</string>
+    <string name="elevation_range">%1$d m – %2$d m</string>
+    <string name="history_routes_show">Mostrar percursos anteriores</string>
+    <string name="history_routes_hide">Ocultar percursos anteriores</string>
+    <string name="poi_add_title">Novo ponto de interesse</string>
+    <string name="poi_name">Nome (opcional)</string>
+    <string name="poi_save">Salvar</string>
+    <string name="poi_delete">Excluir ponto</string>
+    <string name="poi_hint">Segure o dedo no mapa para marcar um ponto de interesse.</string>
+    <string name="poi_kind_water">Água</string>
+    <string name="poi_kind_repair">Oficina</string>
+    <string name="poi_kind_restroom">Banheiro</string>
+    <string name="poi_kind_food">Comida</string>
+    <string name="poi_kind_other">Outro</string>
 </resources>

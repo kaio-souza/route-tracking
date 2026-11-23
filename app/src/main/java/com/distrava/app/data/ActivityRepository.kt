@@ -8,6 +8,7 @@ import com.distrava.app.data.db.ActivityStatus
 import com.distrava.app.data.db.TrackPointEntity
 import com.distrava.app.recording.StatsCalculator
 import com.distrava.app.recording.TrackPoint
+import com.distrava.app.share.RouteProjection
 import com.distrava.app.share.SummaryImageRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -49,6 +50,13 @@ class ActivityRepository(
     }
 
     suspend fun points(activityId: Long): List<TrackPoint> = dao.getPoints(activityId).map { it.toTrackPoint() }
+
+    /**
+     * Rotas dos percursos já finalizados, reduzidas, para sobrepor no mapa.
+     * Limita a quantidade para não pesar em quem tem muitos percursos.
+     */
+    suspend fun historyRoutes(maxRoutes: Int = 200, maxPointsPerRoute: Int = 400): List<List<TrackPoint>> =
+        dao.finishedIds(maxRoutes).map { RouteProjection.downsample(points(it), maxPointsPerRoute) }
 
     /**
      * Calcula as estatísticas, gera a imagem e marca como finalizado.
