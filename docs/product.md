@@ -162,9 +162,26 @@ Acceptance criteria:
 
 Acceptance criteria:
 - A long-press on the map opens a dialog to pick a kind (water, bike shop, restroom, food, other) and an optional name.
-- Points appear on the map with the kind color and the name, also during recording.
+- Points appear on the map with the kind color and the name, also during recording. They are translucent (80%) so they don't hide the route.
+- A button on the home screen shows or hides all points. The choice survives closing the app.
 - Tapping a point shows it and allows deleting it.
 - Points are stored on the device only.
+
+### RF13: Favorites
+
+Acceptance criteria:
+- Starring a ride asks for a name (pre-filled with the date). Unstarring removes the name.
+- The History screen has two tabs: **All** and **Favorites**. Favorites show their name.
+- A favorite can be drawn on the map in blue, under the current route. A chip above the start button shows which one, and tapping it changes or clears it.
+- The chosen favorite survives closing the app.
+
+### RF14: Sharing by QR code
+
+Acceptance criteria:
+- A favorite can be shared as a QR code from its details screen.
+- All points of interest can be shared as one QR code from the History screen.
+- The receiver scans the code inside the app (camera permission is asked only then). Favorites are added to the Favorites tab; points are added to the map without duplicates.
+- No account, server or file is needed. A content that does not fit in one QR code is refused with a message.
 
 ### RF12: Previous rides on the map
 

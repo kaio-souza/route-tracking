@@ -35,11 +35,13 @@ Most ride trackers depend on a phone signal and a cloud account. distrava is bui
 - 📈 **Live route** drawn in orange on the map, with elapsed time, distance and current speed.
 - 📊 **Ride statistics**: total time, moving time, distance, average speed (moving time based) and max speed (GPS spikes filtered out).
 - ⛰️ **Elevation**: total climb and descent, plus an elevation profile chart in the ride details.
-- 📍 **Points of interest**: long-press the map to mark water, a bike shop, a restroom, food or anything else. Tap a point to see or delete it.
+- 📍 **Points of interest**: long-press the map to mark water, a bike shop, a restroom, food or anything else. Tap a point to see or delete it. They are drawn translucent so they don't hide the map, and a button shows or hides them all.
 - 🟣 **Previous rides on the map**: a toggle draws your past routes as thin purple lines under the current route.
 - 🌙 **Dark mode**: one tap switches the whole app, map included, to a dark theme for night rides. It follows the system theme until you choose.
 - 🖼️ **Summary image** (1080 × 1920, Stories format) with the route drawn over the offline map. Save it to the gallery or share it through the Android share sheet.
-- 🕘 **History** of rides, with a route thumbnail, details view and deletion.
+- 🕘 **History** of rides, with a route thumbnail, details view and deletion. Two tabs: **All** rides and **Favorites**.
+- ⭐ **Favorites**: star a ride and give it a name. Favorites are kept in their own tab, and one of them can be drawn on the map in blue (the layers button) to follow a known route.
+- 📲 **Share by QR code, no account or server**: show a QR code with a favorite, or with all your points of interest, and the other person scans it from the **Receive by QR** button in the History screen. Routes are reduced to 300 points so the code stays readable.
 - 🧭 **Crash-safe recovery**: if the system kills the app mid-ride, you can resume or finish it when you reopen the app.
 - 📦 **Map manager**: import or remove `.pmtiles` regions from the device.
 - 🧪 **Ride simulator** in debug builds, so you can test the whole flow without leaving home.

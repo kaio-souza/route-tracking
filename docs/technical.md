@@ -139,8 +139,9 @@ The service starts with a fake out-and-back route on Av. Boa Viagem (geometry ta
 - `activities`: `id`, `startedAt`, `finishedAt`, `status` (`GRAVANDO` or `FINALIZADO`), `distanceMeters`, `totalTimeMs`, `movingTimeMs`, `avgSpeedMps`, `maxSpeedMps`, `imagePath`.
 - `track_points`: `id`, `activityId` (FK with `CASCADE`), `time`, `lat`, `lon`, `altitude`, `speedMps`, `accuracyM`.
 - `pois` (since database version 2): `id`, `lat`, `lon`, `name`, `kind` (`agua`, `oficina`, `banheiro`, `comida` or `outro`), `createdAt`.
+- Favorites are columns of `activities`: `favorite` (boolean, default `0`) and `name` (nullable, set when the ride is starred).
 
-Version 1 to 2 is a Room `AutoMigration` (only the `pois` table is added).
+Versions: 1 to 2 adds `pois`; 2 to 3 adds a nullable `name` to `activities`; 3 to 4 drops that column (`@DeleteColumn` spec `RemoveRouteName`) and adds `favorite`; 4 to 5 adds `name` back for favorites. All are Room `AutoMigration`s.
 
 Internal units are always SI (meters, milliseconds, m/s). Conversion to km and km/h happens only in `Format`.
 
@@ -175,6 +176,17 @@ Drawn on top of the style, from bottom to top:
 2. Current route (orange, with a white casing) and start/end markers.
 3. Points of interest: circle colored by kind, with the name below. Long-press on the map creates one; tapping the circle opens it.
 4. Current position.
+
+The favorite chosen for overlay (`overlayRoute`) is drawn in blue (`#1E88E5`, 4.5 px, 85% opacity) between the previous rides and the current route. Points of interest use `POI_OPACITY` (0.8) and are hidden entirely when the user turns them off (the home screen passes an empty list).
+
+### QR code payload (`share/QrPayload.kt`)
+
+Text = `distrava1:` + base64url(deflate(JSON)), generated with ZXing in error correction level L. The text must stay within 2,800 characters so it fits in one code.
+
+- Favorite: `{"t":"r","n":name,"s":start in epoch seconds,"p":polyline}`. The polyline is Google's encoded polyline with 5 decimal digits, from at most 300 points.
+- Points of interest: `{"t":"p","i":[[name,kind,lat,lon], ...]}`.
+
+On import, a favorite is saved as a finished ride (`ActivityRepository.importFavorite`), so its statistics and image are recomputed. Per-point times are not in the payload: they are set 1 second apart from the start, so moving time is approximate.
 
 ## 6. Summary image
 
