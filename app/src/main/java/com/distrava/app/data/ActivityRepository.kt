@@ -42,6 +42,33 @@ class ActivityRepository(
 
     suspend fun findRecording(): ActivityEntity? = dao.findRecording()
 
+    fun observeFavorites(): Flow<List<ActivityEntity>> = dao.observeFavorites()
+
+    /**
+     * Importa um favorito recebido por QR code: cria o percurso finalizado, calcula as
+     * estatísticas e marca como favorito com o nome recebido. Retorna null se o percurso
+     * for inválido (curto demais ou sem pontos suficientes).
+     */
+    suspend fun importFavorite(name: String, startedAtSec: Long, points: List<TrackPoint>): Long? {
+        if (points.size < 2) return null
+        val id = dao.insert(ActivityEntity(startedAt = startedAtSec * 1000))
+        appendPoints(id, points)
+        return when (finish(id, points.last().time)) {
+            is FinishResult.Saved -> id.also { favorite(it, name) }
+            is FinishResult.Discarded -> null
+        }
+    }
+
+    /** Favorita o percurso com um nome; nome em branco usa a data. */
+    suspend fun favorite(activityId: Long, name: String) =
+        dao.setFavorite(activityId, true, name.trim().ifEmpty { null })
+
+    suspend fun unfavorite(activityId: Long) = dao.setFavorite(activityId, false, null)
+
+    /** Pontos de um percurso finalizado, reduzidos para sobrepor no mapa. */
+    suspend fun overlayRoute(activityId: Long, maxPoints: Int = 2000): List<TrackPoint> =
+        RouteProjection.downsample(points(activityId), maxPoints)
+
     suspend fun startActivity(startedAt: Long): Long = dao.insert(ActivityEntity(startedAt = startedAt))
 
     suspend fun appendPoints(activityId: Long, points: List<TrackPoint>) {

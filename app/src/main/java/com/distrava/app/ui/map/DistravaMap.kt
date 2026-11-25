@@ -43,8 +43,12 @@ private const val ROUTE_SOURCE = "distrava-route"
 private const val ME_SOURCE = "distrava-me"
 private const val ENDPOINTS_SOURCE = "distrava-endpoints"
 private const val HISTORY_SOURCE = "distrava-history"
+private const val OVERLAY_SOURCE = "distrava-overlay"
+private const val OVERLAY_COLOR = "#1E88E5"
 private const val POI_SOURCE = "distrava-pois"
 private const val POI_LAYER = "distrava-pois-circle"
+/** Pontos de interesse translúcidos para não cobrir a rota e o mapa. */
+private const val POI_OPACITY = 0.8f
 private const val HISTORY_COLOR = "#7B61FF"
 private const val ORANGE = "#FC6A03"
 private const val GRAPHITE = "#2B2B2B"
@@ -76,6 +80,7 @@ fun DistravaMap(
     interactive: Boolean = true,
     bottomPaddingPx: Int = 0,
     historyRoutes: List<List<TrackPoint>> = emptyList(),
+    overlayRoute: List<TrackPoint> = emptyList(),
     pois: List<PoiEntity> = emptyList(),
     onLongPress: ((LatLon) -> Unit)? = null,
     onPoiClick: ((Long) -> Unit)? = null,
@@ -198,6 +203,16 @@ fun DistravaMap(
         s.getSourceAs<GeoJsonSource>(HISTORY_SOURCE)?.setGeoJson(FeatureCollection.fromFeatures(lines))
     }
 
+    // Percurso escolhido pelo usuário para sobrepor (azul, acima do histórico).
+    LaunchedEffect(style, overlayRoute) {
+        val s = style ?: return@LaunchedEffect
+        val feature = overlayRoute.takeIf { it.size >= 2 }?.let {
+            Feature.fromGeometry(LineString.fromLngLats(it.map { p -> Point.fromLngLat(p.lon, p.lat) }))
+        }
+        s.getSourceAs<GeoJsonSource>(OVERLAY_SOURCE)
+            ?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(feature)))
+    }
+
     LaunchedEffect(style, pois) {
         val s = style ?: return@LaunchedEffect
         val features = pois.map { p ->
@@ -283,17 +298,27 @@ fun DistravaMap(
 
 private fun addOverlay(style: Style) {
     style.addSource(GeoJsonSource(HISTORY_SOURCE))
+    style.addSource(GeoJsonSource(OVERLAY_SOURCE))
     style.addSource(GeoJsonSource(POI_SOURCE))
     style.addSource(GeoJsonSource(ROUTE_SOURCE))
     style.addSource(GeoJsonSource(ENDPOINTS_SOURCE))
     style.addSource(GeoJsonSource(ME_SOURCE))
 
-    // Ordem: histórico < rota atual < início/fim < pontos de interesse < posição atual.
+    // Ordem: histórico < sobreposição < rota atual < início/fim < pontos de interesse < posição atual.
     style.addLayer(
         LineLayer(HISTORY_SOURCE, HISTORY_SOURCE).withProperties(
             PropertyFactory.lineColor(HISTORY_COLOR),
             PropertyFactory.lineWidth(3f),
             PropertyFactory.lineOpacity(0.55f),
+            PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+            PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+        ),
+    )
+    style.addLayer(
+        LineLayer(OVERLAY_SOURCE, OVERLAY_SOURCE).withProperties(
+            PropertyFactory.lineColor(OVERLAY_COLOR),
+            PropertyFactory.lineWidth(4.5f),
+            PropertyFactory.lineOpacity(0.85f),
             PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
             PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
         ),
@@ -330,10 +355,12 @@ private fun addOverlay(style: Style) {
     )
     style.addLayer(
         CircleLayer(POI_LAYER, POI_SOURCE).withProperties(
-            PropertyFactory.circleRadius(9f),
+            PropertyFactory.circleRadius(7f),
             PropertyFactory.circleColor(Expression.get("color")),
+            PropertyFactory.circleOpacity(POI_OPACITY),
             PropertyFactory.circleStrokeColor("#FFFFFF"),
-            PropertyFactory.circleStrokeWidth(2.5f),
+            PropertyFactory.circleStrokeWidth(1.5f),
+            PropertyFactory.circleStrokeOpacity(POI_OPACITY),
         ),
     )
     style.addLayer(
@@ -344,8 +371,10 @@ private fun addOverlay(style: Style) {
             PropertyFactory.textAnchor(Property.TEXT_ANCHOR_TOP),
             PropertyFactory.textOffset(arrayOf(0f, 1f)),
             PropertyFactory.textColor(GRAPHITE),
+            PropertyFactory.textOpacity(POI_OPACITY),
             PropertyFactory.textHaloColor("#FFFFFF"),
             PropertyFactory.textHaloWidth(1.5f),
+            PropertyFactory.textHaloBlur(0.5f),
             PropertyFactory.textOptional(true),
         ),
     )

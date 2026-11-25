@@ -26,6 +26,12 @@ interface ActivityDao {
     @Query("SELECT * FROM activities WHERE status = '${ActivityStatus.RECORDING}' ORDER BY startedAt DESC LIMIT 1")
     suspend fun findRecording(): ActivityEntity?
 
+    @Query("UPDATE activities SET favorite = :favorite, name = :name WHERE id = :id")
+    suspend fun setFavorite(id: Long, favorite: Boolean, name: String?)
+
+    @Query("SELECT * FROM activities WHERE status = '${ActivityStatus.FINISHED}' AND favorite = 1 ORDER BY startedAt DESC")
+    fun observeFavorites(): Flow<List<ActivityEntity>>
+
     @Query("DELETE FROM activities WHERE id = :id")
     suspend fun delete(id: Long)
 

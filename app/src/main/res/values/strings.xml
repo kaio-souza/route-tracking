@@ -95,4 +95,36 @@
     <string name="poi_kind_restroom">Banheiro</string>
     <string name="poi_kind_food">Comida</string>
     <string name="poi_kind_other">Outro</string>
+
+    <!-- Favoritos e sobreposição de percursos -->
+    <string name="overlay_action">Sobrepor percurso</string>
+    <string name="overlay_pick_title">Sobrepor percurso</string>
+    <string name="overlay_pick_text">Mostra os favoritos. O percurso escolhido aparece no mapa em azul, por cima do histórico.</string>
+    <string name="overlay_none">Nenhum</string>
+    <string name="overlay_empty">Nenhum favorito ainda. Abra um percurso no histórico e toque na estrela.</string>
+    <string name="overlay_showing">Sobreposto: %1$s</string>
+    <string name="favorite_add">Favoritar</string>
+    <string name="favorite_remove">Remover dos favoritos</string>
+    <string name="history_tab_all">Todos</string>
+    <string name="history_tab_favorites">Favoritos</string>
+    <string name="history_favorites_empty">Nenhum percurso favoritado. Abra um percurso e toque na estrela para favoritar.</string>
+    <string name="favorite_name_title">Favoritar percurso</string>
+    <string name="favorite_name_label">Nome</string>
+    <string name="favorite_name_hint">Ex.: Volta da lagoa</string>
+    <string name="favorite_save">Favoritar</string>
+    <!-- Compartilhar e receber por QR code -->
+    <string name="share_route_qr">Compartilhar favorito</string>
+    <string name="share_route_too_long">Percurso longo demais para um QR code.</string>
+    <string name="share_pois_qr">QR dos pontos de interesse</string>
+    <string name="share_pois_too_long">Pontos demais para um QR code.</string>
+    <string name="share_hint">Peça para a outra pessoa abrir o distrava, tocar em Receber por QR e escanear esta tela.</string>
+    <string name="receive_qr">Receber por QR</string>
+    <string name="receive_prompt">Aponte a câmera para o QR code do distrava</string>
+    <string name="imported_route">Favorito importado: %1$s</string>
+    <string name="imported_route_failed">Este percurso é curto demais para ser importado.</string>
+    <string name="imported_pois">%1$d pontos de interesse importados</string>
+    <string name="invalid_qr">Este QR code não é do distrava.</string>
+    <string name="no_pois_to_share">Nenhum ponto de interesse para compartilhar.</string>
+    <string name="poi_show">Mostrar pontos de interesse</string>
+    <string name="poi_hide">Ocultar pontos de interesse</string>
 </resources>
