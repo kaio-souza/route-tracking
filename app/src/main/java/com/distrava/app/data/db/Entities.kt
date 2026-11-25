@@ -1,5 +1,6 @@
 package com.distrava.app.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -23,6 +24,9 @@ data class ActivityEntity(
     val avgSpeedMps: Double = 0.0,
     val maxSpeedMps: Double = 0.0,
     val imagePath: String? = null,
+    @ColumnInfo(defaultValue = "0") val favorite: Boolean = false,
+    /** Nome dado ao favoritar; null enquanto não é favorito. */
+    val name: String? = null,
 )
 
 @Entity(

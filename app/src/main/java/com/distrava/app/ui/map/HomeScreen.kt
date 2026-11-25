@@ -26,10 +26,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -97,10 +102,21 @@ fun HomeScreen(
     val darkOverride by container.darkTheme.collectAsStateWithLifecycle()
     val pois by container.poiDao.observeAll().collectAsStateWithLifecycle(initialValue = emptyList())
     val finished by container.activityRepository.observeFinished().collectAsStateWithLifecycle(initialValue = emptyList())
+    val favorites by container.activityRepository.observeFavorites().collectAsStateWithLifecycle(initialValue = emptyList())
     var showHistory by remember { mutableStateOf(container.prefs.getBoolean(PREF_SHOW_HISTORY, false)) }
+    var showPois by remember { mutableStateOf(container.prefs.getBoolean(PREF_SHOW_POIS, true)) }
     val historyRoutes by produceState(initialValue = emptyList<List<TrackPoint>>(), showHistory, finished.size) {
         value = if (showHistory) container.activityRepository.historyRoutes() else emptyList()
     }
+    // Percurso salvo escolhido para sobrepor (id guardado entre execuções; -1 = nenhum).
+    var overlayId by remember {
+        mutableStateOf(container.prefs.getLong(PREF_OVERLAY_ROUTE, NO_ROUTE).takeIf { it != NO_ROUTE })
+    }
+    var showOverlayPicker by remember { mutableStateOf(false) }
+    val overlayRoute by produceState(initialValue = emptyList<TrackPoint>(), overlayId) {
+        value = overlayId?.let { container.activityRepository.overlayRoute(it) }.orEmpty()
+    }
+    val overlayActivity = finished.firstOrNull { it.id == overlayId }
     var pendingPoi by remember { mutableStateOf<LatLon?>(null) }
     var selectedPoiId by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(Unit) {
@@ -221,7 +237,8 @@ fun HomeScreen(
             recenterSignal = recenter,
             bottomPaddingPx = bottomPanelPx,
             historyRoutes = historyRoutes,
-            pois = pois,
+            overlayRoute = overlayRoute,
+            pois = if (showPois) pois else emptyList(),
             onLongPress = { pendingPoi = it },
             onPoiClick = { selectedPoiId = it },
             onUserGesture = {
@@ -260,6 +277,29 @@ fun HomeScreen(
             horizontalAlignment = Alignment.End,
         ) {
             SmallFloatingActionButton(
+                onClick = { showOverlayPicker = true },
+                containerColor = if (overlayId != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,
+                contentColor = if (overlayId != null) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            ) {
+                Icon(Icons.Default.Layers, contentDescription = stringResource(R.string.overlay_action))
+            }
+            Spacer(Modifier.height(12.dp))
+
+            SmallFloatingActionButton(
+                onClick = {
+                    showPois = !showPois
+                    container.prefs.edit().putBoolean(PREF_SHOW_POIS, showPois).apply()
+                },
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+            ) {
+                Icon(
+                    if (showPois) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = stringResource(if (showPois) R.string.poi_hide else R.string.poi_show),
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
+            SmallFloatingActionButton(
                 onClick = {
                     showHistory = !showHistory
                     container.prefs.edit().putBoolean(PREF_SHOW_HISTORY, showHistory).apply()
@@ -295,6 +335,19 @@ fun HomeScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                 ) {
                     Icon(Icons.Default.LocationOn, contentDescription = stringResource(R.string.recenter))
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
+            if (overlayActivity != null) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    AssistChip(
+                        onClick = { showOverlayPicker = true },
+                        label = { Text(stringResource(R.string.overlay_showing, routeLabel(overlayActivity))) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                        ),
+                    )
                 }
                 Spacer(Modifier.height(12.dp))
             }
@@ -356,6 +409,19 @@ fun HomeScreen(
             onDelete = {
                 selectedPoiId = null
                 scope.launch { container.poiDao.delete(poi.id) }
+            },
+        )
+    }
+
+    if (showOverlayPicker) {
+        PickOverlayRouteDialog(
+            routes = favorites,
+            selectedId = overlayId,
+            onDismiss = { showOverlayPicker = false },
+            onPick = { id ->
+                showOverlayPicker = false
+                overlayId = id
+                container.prefs.edit().putLong(PREF_OVERLAY_ROUTE, id ?: NO_ROUTE).apply()
             },
         )
     }
@@ -433,7 +499,10 @@ fun HomeScreen(
 private const val PREF_BATTERY_PROMPTED = "battery_prompted"
 private const val FOLLOW_RESUME_MS = 8_000L
 private const val PREF_SHOW_HISTORY = "show_history_routes"
+private const val PREF_SHOW_POIS = "show_pois"
 private const val PREF_POI_HINT = "poi_hint_shown"
+private const val PREF_OVERLAY_ROUTE = "overlay_route_id"
+private const val NO_ROUTE = -1L
 
 private fun discardMessage(reason: DiscardReason) = when (reason) {
     DiscardReason.NO_GPS -> R.string.ride_discarded_no_gps

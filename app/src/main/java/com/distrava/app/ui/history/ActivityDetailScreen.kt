@@ -21,12 +21,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -65,6 +69,11 @@ import com.distrava.app.recording.TrackPoint
 import com.distrava.app.share.ImageExporter
 import com.distrava.app.ui.Format
 import com.distrava.app.ui.map.DistravaMap
+import com.distrava.app.ui.map.FavoriteNameDialog
+import com.distrava.app.share.QrPayload
+import com.distrava.app.share.SharedItem
+import com.distrava.app.ui.share.ShareQrDialog
+import com.distrava.app.ui.theme.DistravaOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -103,6 +112,8 @@ fun ActivityDetailScreen(activityId: Long, onBack: () -> Unit) {
     }
 
     var confirmDelete by remember { mutableStateOf(false) }
+    var naming by remember { mutableStateOf(false) }
+    var qrText by remember { mutableStateOf<String?>(null) }
 
     fun save() {
         val f = imageFile ?: return
@@ -126,6 +137,31 @@ fun ActivityDetailScreen(activityId: Long, onBack: () -> Unit) {
                     }
                 },
                 actions = {
+                    val favorite = activity?.favorite == true
+                    IconButton(
+                        onClick = {
+                            val a = activity ?: return@IconButton
+                            val text = QrPayload.encode(SharedItem.Route(a.name.orEmpty(), a.startedAt / 1000, points))
+                            if (text == null) {
+                                scope.launch { snackbar.showSnackbar(context.getString(R.string.share_route_too_long)) }
+                            } else {
+                                qrText = text
+                            }
+                        },
+                        enabled = favorite,
+                    ) {
+                        Icon(Icons.Default.QrCode, contentDescription = stringResource(R.string.share_route_qr))
+                    }
+                    IconButton(
+                        onClick = { if (favorite) scope.launch { repo.unfavorite(activityId) } else naming = true },
+                        enabled = activity != null,
+                    ) {
+                        Icon(
+                            if (favorite) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = stringResource(if (favorite) R.string.favorite_remove else R.string.favorite_add),
+                            tint = if (favorite) DistravaOrange else LocalContentColor.current,
+                        )
+                    }
                     IconButton(onClick = { confirmDelete = true }) {
                         Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
                     }
@@ -232,6 +268,26 @@ fun ActivityDetailScreen(activityId: Long, onBack: () -> Unit) {
                 Text(stringResource(R.string.done))
             }
         }
+    }
+
+    activity?.takeIf { naming }?.let { a ->
+        FavoriteNameDialog(
+            defaultName = Format.dateTime(a.startedAt),
+            onDismiss = { naming = false },
+            onSave = { name ->
+                naming = false
+                scope.launch { repo.favorite(activityId, name) }
+            },
+        )
+    }
+
+    qrText?.let { text ->
+        ShareQrDialog(
+            title = stringResource(R.string.share_route_qr),
+            hint = stringResource(R.string.share_hint),
+            text = text,
+            onDismiss = { qrText = null },
+        )
     }
 
     if (confirmDelete) {

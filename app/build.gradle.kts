@@ -103,6 +103,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
     implementation("org.maplibre.gl:android-sdk:11.13.5")
+    // QR code: geração (ZXing core) e leitura pela câmera (tela de scanner pronta).
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     testImplementation("junit:junit:4.13.2")
 }
